@@ -11,16 +11,30 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:currency_converter_app/main.dart';
 
 void main() {
-  testWidgets('USD amount is converted to words in the result field',
-      (WidgetTester tester) async {
+  testWidgets('entering INR converts to USD', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
-    final usdField = find.byType(TextField).first;
-    final inrField = find.byType(TextField).last;
+    final inrField = find.byKey(const ValueKey('inr_amount'));
+    final usdField = find.byKey(const ValueKey('usd_amount'));
 
-    await tester.enterText(usdField, '100');
+    await tester.enterText(inrField, '83');
     await tester.pump();
 
-    expect((tester.widget<TextField>(inrField).controller?.text ?? ''), 'one hundred');
+    expect((tester.widget<TextField>(usdField).controller?.text ?? ''), '1.00');
+  });
+
+  testWidgets('entering USD converts to INR', (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    final usdField = find.byKey(const ValueKey('usd_amount'));
+    final inrField = find.byKey(const ValueKey('inr_amount'));
+
+    await tester.enterText(usdField, '10');
+    await tester.pump();
+
+    expect(
+      (tester.widget<TextField>(inrField).controller?.text ?? ''),
+      '830.00',
+    );
   });
 }
