@@ -10,194 +10,148 @@ class CurrencyConverterMaterialPage extends StatefulWidget {
 
 class _CurrencyConverterMaterialPageState
     extends State<CurrencyConverterMaterialPage> {
-  final TextEditingController amountController = TextEditingController();
-  final TextEditingController resultController = TextEditingController();
+  static const double _rate = 83.0;
 
-  String _convertNumberToWords(String value) {
+  final TextEditingController inrController = TextEditingController();
+  final TextEditingController usdController = TextEditingController();
+
+  String _formatAmount(double value) {
+    return value.toStringAsFixed(2);
+  }
+
+  void _updateUsdFromInr(String value) {
     if (value.trim().isEmpty) {
-      return '';
+      usdController.clear();
+      return;
     }
 
-    final parsedValue = int.tryParse(value);
-    if (parsedValue == null) {
-      return '';
+    final inrAmount = double.tryParse(value);
+    if (inrAmount == null) {
+      return;
     }
 
-    if (parsedValue == 0) {
-      return 'zero';
+    final usdAmount = inrAmount / _rate;
+    usdController.value = TextEditingValue(
+      text: _formatAmount(usdAmount),
+      selection: TextSelection.collapsed(
+        offset: _formatAmount(usdAmount).length,
+      ),
+    );
+  }
+
+  void _updateInrFromUsd(String value) {
+    if (value.trim().isEmpty) {
+      inrController.clear();
+      return;
     }
 
-    const ones = [
-      'zero',
-      'one',
-      'two',
-      'three',
-      'four',
-      'five',
-      'six',
-      'seven',
-      'eight',
-      'nine'
-    ];
-    const teens = [
-      'ten',
-      'eleven',
-      'twelve',
-      'thirteen',
-      'fourteen',
-      'fifteen',
-      'sixteen',
-      'seventeen',
-      'eighteen',
-      'nineteen'
-    ];
-    const tens = [
-      '',
-      '',
-      'twenty',
-      'thirty',
-      'forty',
-      'fifty',
-      'sixty',
-      'seventy',
-      'eighty',
-      'ninety'
-    ];
-    const scales = ['', 'thousand', 'million', 'billion'];
-
-    String convertUnderThousand(int number) {
-      if (number < 10) {
-        return ones[number];
-      }
-      if (number < 20) {
-        return teens[number - 10];
-      }
-      if (number < 100) {
-        final tensDigit = number ~/ 10;
-        final onesDigit = number % 10;
-        if (onesDigit == 0) {
-          return tens[tensDigit];
-        }
-        return '${tens[tensDigit]} ${ones[onesDigit]}';
-      }
-
-      final hundredsDigit = number ~/ 100;
-      final remainder = number % 100;
-      if (remainder == 0) {
-        return '${ones[hundredsDigit]} hundred';
-      }
-      return '${ones[hundredsDigit]} hundred ${convertUnderThousand(remainder)}';
+    final usdAmount = double.tryParse(value);
+    if (usdAmount == null) {
+      return;
     }
 
-    final groups = <int>[];
-    var remaining = parsedValue;
-    while (remaining > 0) {
-      groups.add(remaining % 1000);
-      remaining ~/= 1000;
-    }
+    final inrAmount = usdAmount * _rate;
+    inrController.value = TextEditingValue(
+      text: _formatAmount(inrAmount),
+      selection: TextSelection.collapsed(
+        offset: _formatAmount(inrAmount).length,
+      ),
+    );
+  }
 
-    final words = <String>[];
-    for (int i = groups.length - 1; i >= 0; i--) {
-      final groupValue = groups[i];
-      if (groupValue == 0) {
-        continue;
-      }
-
-      final groupWords = convertUnderThousand(groupValue);
-      final scale = scales[i];
-      if (scale.isEmpty) {
-        words.add(groupWords);
-      } else {
-        words.add('$groupWords $scale');
-      }
-    }
-
-    return words.join(' ');
+  Widget _currencyField({
+    required String label,
+    required String prefix,
+    required TextEditingController controller,
+    required ValueChanged<String> onChanged,
+    required ValueKey<String> key,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextField(
+        key: key,
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        onChanged: onChanged,
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: 'Enter $label amount',
+          prefixText: prefix,
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Colors.white),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Colors.amber, width: 2),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
-    amountController.dispose();
-    resultController.dispose();
+    inrController.dispose();
+    usdController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blueGrey,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              amountController.text.isEmpty ? '0' : amountController.text,
-              style: const TextStyle(
-                fontSize: 45,
-                fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 255, 255, 255),
-              ),
-            ),
-            TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              onChanged: (value) {
-                setState(() {
-                  resultController.text = _convertNumberToWords(value);
-                  resultController.selection = TextSelection.fromPosition(
-                    TextPosition(offset: resultController.text.length),
-                  );
-                });
-              },
-              style: const TextStyle(
-                color: Colors.green,
-              ),
-              decoration: InputDecoration(
-                hintText: 'Please enter the amount in USD',
-                hintStyle: const TextStyle(
-                  color: Colors.black,
-                ),
-                prefixIcon: const Icon(Icons.monetization_on_outlined),
-                prefixIconColor: Colors.black,
-                filled: true,
-                fillColor: Colors.white,
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(
-                    color: Colors.pinkAccent,
-                    width: 2.0,
-                    style: BorderStyle.solid,
+      backgroundColor: Colors.blueGrey.shade900,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Basic Currency Converter',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  borderRadius: BorderRadius.all(Radius.circular(60)),
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: resultController,
-              readOnly: true,
-              style: const TextStyle(
-                color: Colors.green,
-              ),
-              decoration: InputDecoration(
-                hintText: 'You Entered Amount in USD in Words',
-                hintStyle: const TextStyle(
-                  color: Colors.black,
+                const SizedBox(height: 24),
+                _currencyField(
+                  key: const ValueKey('inr_amount'),
+                  label: 'INR',
+                  prefix: '₹ ',
+                  controller: inrController,
+                  onChanged: _updateUsdFromInr,
                 ),
-                prefixIcon: const Icon(Icons.monetization_on_outlined),
-                prefixIconColor: Colors.black,
-                filled: true,
-                fillColor: Colors.white,
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(
-                    color: Colors.pinkAccent,
-                    width: 2.0,
-                    style: BorderStyle.solid,
+                const SizedBox(height: 16),
+                _currencyField(
+                  key: const ValueKey('usd_amount'),
+                  label: 'USD',
+                  prefix: '\$ ',
+                  controller: usdController,
+                  onChanged: _updateInrFromUsd,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Fixed rate: 1 USD = 83 INR',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.amber,
+                    fontWeight: FontWeight.w600,
                   ),
-                  borderRadius: BorderRadius.all(Radius.circular(60)),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
